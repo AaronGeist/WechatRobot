@@ -19,10 +19,11 @@ class Token:
             # refresh token
             response = HttpUtils.get(url=self.URL_TEMPLATE.format(Config.get("app_id"), Config.get("app_secret")),
                                      return_raw=True)
-
-            print(response)
-            token = ""
+            print(response.text)
             self.cache.set_with_expire(self.TOKEN_KEY, token, self.EXPIRE_TIME)
-            pass
 
         return token
+
+if __name__ == "__main__":
+    token = Token()
+    token.fetch()
