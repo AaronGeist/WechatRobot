@@ -1,3 +1,5 @@
+import json
+
 from core.cache import Cache
 from util.config import Config
 from util.http import HttpUtils
@@ -5,8 +7,9 @@ from util.http import HttpUtils
 
 class Token:
     TOKEN_KEY = "wechat_token_key"
-    EXPIRE_TIME = 7200
     URL_TEMPLATE = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={0}&secret={1}"
+    RESPONSE_KEY = "access_token"
+    EXPIRE_KEY = "expires_in"
 
     cache = None
 
@@ -14,18 +17,20 @@ class Token:
         self.cache = Cache()
 
     def fetch(self):
-        token = self.cache.get(self.TOKEN_KEY)
-        if token is None:
-            print("None token, need to fetch")
+        access_token = self.cache.get(self.TOKEN_KEY)
+        if access_token is None or len(access_token) == 0:
+            print("Token has been expired, try fetching new one.")
             # refresh token
             response = HttpUtils.get(url=self.URL_TEMPLATE.format(Config.get("app_id"), Config.get("app_secret")),
                                      return_raw=True)
-            print(response.text)
+            if response is not None:
+                resp_json = json.loads(str(response.text))
+                access_token = resp_json[self.RESPONSE_KEY]
+                expire_time = resp_json[self.EXPIRE_KEY]
+                print("Fetch done, " + access_token)
+                self.cache.set_with_expire(self.TOKEN_KEY, access_token, expire_time)
 
-            print("Fetch done, " + str(response.text))
-            self.cache.set_with_expire(self.TOKEN_KEY, token, self.EXPIRE_TIME)
-
-        return token
+        return access_token
 
 
 if __name__ == "__main__":
